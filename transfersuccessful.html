@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Successful</title>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        background: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 430px;
+        padding-top: 70px;
+        text-align: center;
+    }
+
+    /* Logo placeholder */
+   .logo-wrapper {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 0px; /* reduced space */
+    display: flex;
+        align-items: center;
+        justify-content: center;
+}
+
+
+
+    .logo-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* Text */
+    .message {
+    font-size: 15px;
+    color: #6b6f76;
+    margin-top: -28px;   /* pulls text upward */
+    margin-bottom: 40px;
+    line-height: 1.3;
+    padding: 0 20px;
+}
+
+
+    /* Primary Button */
+   .primary-btn {
+    width: calc(100% - 20px); /* wider */
+    height: 42px;            /* slimmer */
+    margin: 0 auto 18px;
+    background: #0070ba;
+    border: none;
+    border-radius: 21px;     /* keeps pill shape */
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: block;
+}
+
+
+    .primary-btn:active {
+        background: #005ea6;
+    }
+
+    /* Secondary link */
+    .secondary-link {
+        display: inline-block;
+        font-size: 14px;
+        font-weight: 900;
+        color: #0070ba;
+        text-decoration: none;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Your logo here -->
+    <div class="logo-wrapper">
+        <img src="logo.png" alt="Success Logo">
+    </div>
+
+    <!-- Message -->
+    <p class="message" id="successMessage">
+        You've sent $1000 to fabriciooliveira3010@gmail.com
+    </p>
+
+    <!-- Button -->
+    <button class="primary-btn" id="sendMoreBtn">
+        Send More Money
+    </button>
+
+    <!-- Link -->
+    <a href="#" class="secondary-link" id="summaryLink">
+        Go to Summary
+    </a>
+
+</div>
+
+<script>
+// Include jsPDF library
+const script = document.createElement('script');
+script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+document.head.appendChild(script);
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Function to get URL parameters
+    function getQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        const paramsObj = {};
+        for (const [key, value] of params.entries()) {
+            paramsObj[key] = decodeURIComponent(value);
+        }
+        return paramsObj;
+    }
+    
+    // Function to format amount WITHOUT decimal points
+    function formatAmount(amount) {
+        if (!amount) return "0";
+        
+        // Try to parse as number
+        const num = parseFloat(amount);
+        if (isNaN(num)) return amount;
+        
+        // Remove decimal points by rounding to nearest whole number
+        return Math.round(num).toString();
+    }
+    
+    // Function to load image and convert to base64
+    function loadImageAsBase64(url, callback) {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // Handle CORS if needed
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const base64 = canvas.toDataURL('image/png');
+            
+            // Pass both base64 and original dimensions
+            callback({
+                base64: base64,
+                width: img.width,
+                height: img.height
+            });
+        };
+        img.onerror = function() {
+            console.error('Failed to load logo image');
+            callback(null);
+        };
+        img.src = url;
+    }
+    
+    // Function to generate and download PDF that looks exactly like the success page
+    function generateAndDownloadPDF(email, amount, logoData) {
+        // Wait for jsPDF to load
+        if (typeof window.jspdf === 'undefined') {
+            setTimeout(() => generateAndDownloadPDF(email, amount, logoData), 100);
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const formattedAmount = formatAmount(amount);
+        
+        // Set A4 dimensions
+        const pageWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        
+        // Start Y position - at the top of the page
+        let yPos = 30; // Smaller margin from top
+        
+        // Add the actual logo image if available
+        const logoCenterX = pageWidth / 2;
+        
+        if (logoData && logoData.base64) {
+            // Calculate proportional size based on original dimensions
+            const maxLogoWidth = 80; // mm - smaller size
+            const maxLogoHeight = 80; // mm - smaller size
+            
+            // Calculate proportional dimensions
+            let logoWidth = maxLogoWidth;
+            let logoHeight = maxLogoHeight;
+            
+            if (logoData.width > logoData.height) {
+                // Landscape image
+                logoHeight = (maxLogoWidth / logoData.width) * logoData.height;
+            } else {
+                // Portrait or square image
+                logoWidth = (maxLogoHeight / logoData.height) * logoData.width;
+            }
+            
+            // Ensure it doesn't exceed max dimensions
+            if (logoWidth > maxLogoWidth) {
+                logoWidth = maxLogoWidth;
+                logoHeight = (maxLogoWidth / logoData.width) * logoData.height;
+            }
+            if (logoHeight > maxLogoHeight) {
+                logoHeight = maxLogoHeight;
+                logoWidth = (maxLogoHeight / logoData.height) * logoData.width;
+            }
+            
+            // Add the actual logo.png image with proper proportions
+            doc.addImage(
+                logoData.base64, 
+                'PNG', 
+                logoCenterX - (logoWidth/2), 
+                yPos, 
+                logoWidth, 
+                logoHeight
+            );
+            
+            yPos += logoHeight + 5; // Very small gap after logo
+        } else {
+            // Fallback: Add smaller circle logo
+            const logoRadius = 35; // Smaller radius
+            doc.setFillColor(0, 112, 186); // PayPal blue
+            doc.circle(logoCenterX, yPos + logoRadius, logoRadius, 'F');
+            
+            // Add "P" as fallback
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20); // Smaller font
+            doc.setFont('helvetica', 'bold');
+            doc.text('P', logoCenterX, yPos + logoRadius + 5, { align: 'center' });
+            yPos += (logoRadius * 2) + 5;
+        }
+        
+        // Add success message (smaller font)
+        const message = `You've sent $${formattedAmount} to ${email}`;
+        doc.setTextColor(107, 111, 118); // #6b6f76 - exact same color
+        doc.setFontSize(13); // Smaller font
+        doc.setFont('helvetica', 'normal');
+        
+        // Split message if too long for PDF width
+        const maxWidth = 180; // mm - almost full page width
+        const lines = doc.splitTextToSize(message, maxWidth);
+        
+        // Calculate text height and position it close to logo
+        const lineHeight = 5; // Smaller line height
+        const totalTextHeight = (lines.length * lineHeight);
+        
+        lines.forEach((line, index) => {
+            doc.text(line, pageWidth / 2, yPos + (index * lineHeight), { align: 'center' });
+        });
+        
+        yPos += totalTextHeight + 20; // Smaller space before button
+        
+        // Add "Send More Money" button - smaller
+        const buttonWidth = 150; // mm - smaller
+        const buttonHeight = 10; // mm - slimmer
+        const buttonRadius = buttonHeight / 2; // Pill shape
+        
+        // Calculate button position (centered)
+        const buttonX = (pageWidth - buttonWidth) / 2;
+        
+        // Draw button with pill shape
+        doc.setFillColor(0, 112, 186); // #0070ba
+        doc.roundedRect(buttonX, yPos, buttonWidth, buttonHeight, buttonRadius, buttonRadius, 'F');
+        
+        // Button text (smaller)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13); // Smaller font
+        doc.setFont('helvetica', 'bold');
+        doc.text('Send More Money', pageWidth / 2, yPos + (buttonHeight / 2) + 1.5, { align: 'center' });
+        
+        yPos += buttonHeight + 12; // Smaller space after button
+        
+        // Add "Go to Summary" link (smaller)
+        doc.setTextColor(0, 112, 186); // #0070ba
+        doc.setFontSize(12); // Smaller font
+        doc.setFont('helvetica', 'bold');
+        doc.text('Go to Summary', pageWidth / 2, yPos, { align: 'center' });
+        
+        // Generate filename with current timestamp
+        const timestamp = new Date().getTime();
+        const filename = `Payment_Receipt_${timestamp}.pdf`;
+        
+        // Download the PDF immediately
+        doc.save(filename);
+    }
+    
+    // Main function to update the success message and trigger PDF download
+    function initializePage() {
+        const params = getQueryParams();
+        const messageElement = document.getElementById('successMessage');
+        
+        if (params.email && params.amount) {
+            const formattedAmount = formatAmount(params.amount);
+            messageElement.textContent = `You've sent $${formattedAmount} to ${params.email}`;
+            
+            // Load the logo image first, then generate PDF
+            loadImageAsBase64('logo.png', function(logoData) {
+                // Start PDF generation immediately
+                function checkAndGeneratePDF() {
+                    if (typeof window.jspdf !== 'undefined') {
+                        generateAndDownloadPDF(params.email, params.amount, logoData);
+                    } else {
+                        // Try again in 50ms
+                        setTimeout(checkAndGeneratePDF, 50);
+                    }
+                }
+                
+                // Start checking for jsPDF
+                checkAndGeneratePDF();
+            });
+            
+        } else if (params.email) {
+            messageElement.textContent = `Payment sent successfully to ${params.email}`;
+        } else if (params.amount) {
+            const formattedAmount = formatAmount(params.amount);
+            messageElement.textContent = `You've sent $${formattedAmount} successfully`;
+        }
+        // If no parameters, keep the default message
+    }
+    
+    // Add click handler for "Send More Money" button
+    document.getElementById('sendMoreBtn').addEventListener('click', function() {
+        window.location.href = 'transfer.html'; // Go back to transfer form
+    });
+    
+    // Add click handler for "Go to Summary" link
+    document.getElementById('summaryLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        const params = getQueryParams();
+        
+        // Pass the transaction data to summary page if needed
+        let summaryUrl = 'summary.html';
+        if (params.email || params.amount) {
+            summaryUrl += '?';
+            if (params.email) summaryUrl += `email=${encodeURIComponent(params.email)}`;
+            if (params.email && params.amount) summaryUrl += '&';
+            if (params.amount) summaryUrl += `amount=${encodeURIComponent(params.amount)}`;
+        }
+        
+        window.location.href = summaryUrl;
+    });
+    
+    // Initialize page immediately with PDF download
+    initializePage();
+});
+</script>
+
+</body>
+</html>
