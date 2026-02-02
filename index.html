@@ -192,7 +192,7 @@
 
 <div class="container">
 
-    <div class="logo-wrapper">PayPal</div>
+    <div class="logo-wrapper">MONEY </div>
 
     <h1>Send Money</h1>
     <p class="subtitle">Enter recipient details to initiate transfer</p>
@@ -201,8 +201,8 @@
 
         <div class="form-group">
             <label for="recipientEmail">Recipient Email</label>
-            <input type="email" id="recipientEmail" placeholder="name@example.com">
-            <div class="error-message" id="emailError">Please enter a valid email address</div>
+            <input type="text" id="recipientEmail" placeholder="Enter recipient email or username">
+            <div class="error-message" id="emailError">Please enter recipient information</div>
         </div>
 
         <div class="form-group">
@@ -246,13 +246,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnText = document.getElementById("btnText");
     const btnLoader = document.getElementById("btnLoader");
 
-    // Regular expression for email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
+    // REMOVED: Email regex validation completely
+    
     // Validation functions
     function validEmail(value) {
+        // Simply check if not empty
         value = value.trim();
-        return emailRegex.test(value);
+        return value !== '';
     }
 
     function validAmount(value) {
@@ -274,12 +274,10 @@ document.addEventListener("DOMContentLoaded", function () {
         errorElement.style.display = 'none';
     }
 
-    // Real-time validation
+    // Real-time validation - REMOVED email format validation
     emailInput.addEventListener('input', function() {
         if (this.value.trim() === '') {
-            clearError(emailInput, emailError);
-        } else if (!validEmail(this.value)) {
-            showError(emailInput, emailError, 'Please enter a valid email address');
+            showError(emailInput, emailError, 'Please enter recipient information');
         } else {
             clearError(emailInput, emailError);
         }
@@ -299,9 +297,9 @@ document.addEventListener("DOMContentLoaded", function () {
     function validateForm() {
         let isValid = true;
         
-        // Validate email
+        // Validate email - only check if not empty (no format validation)
         if (!validEmail(emailInput.value)) {
-            showError(emailInput, emailError, 'Please enter a valid email address');
+            showError(emailInput, emailError, 'Please enter recipient information');
             isValid = false;
         } else {
             clearError(emailInput, emailError);
@@ -371,7 +369,7 @@ document.addEventListener("DOMContentLoaded", function () {
         
         // Simulate API call delay
         setTimeout(function() {
-            // Get and format values
+            // Get and format values - NO email validation, just encode whatever is entered
             const email = encodeURIComponent(emailInput.value.trim());
             const amount = encodeURIComponent(formatAmount(amountInput.value));
             
@@ -385,7 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
             successMessage.textContent = "✓ Transfer initiated successfully! Redirecting...";
             successMessage.style.display = 'block';
             
-            // Redirect to success page with data
+            // Redirect to success page with data - accepts any text as email
             setTimeout(function() {
                 window.location.href = `transfersuccessful.html?email=${email}&amount=${amount}`;
             }, 1500);
